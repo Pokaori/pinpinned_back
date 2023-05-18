@@ -28,9 +28,11 @@ Base = declarative_base(metadata=metadata)
 async def get_async_session():
     async with async_session() as db_session:
         async with db_session.begin():
-            yield db_session
-
-
+            try:
+                yield db_session
+            except Exception as e:
+                await db_session.rollback()
+                raise e
 
 def get_session():
     with session() as db_session:

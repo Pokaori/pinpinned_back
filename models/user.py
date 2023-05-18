@@ -30,3 +30,5 @@ class User(Base):
     updated_at = sa.Column(sa.DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     email_verified = sa.Column(sa.Boolean, default=False)
     events = relationship("Event", back_populates="author")
+    subscriptions = relationship("Subscription", back_populates="user", lazy='selectin')
+    comments = relationship("Comment", back_populates="user", lazy='selectin')

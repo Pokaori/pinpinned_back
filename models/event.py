@@ -1,8 +1,12 @@
 import uuid
+
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import UUID, TEXT
-from sqlalchemy.orm import relationship
+from sqlalchemy.future import select
+from sqlalchemy.orm import relationship, column_property
 from geoalchemy2.types import Geography
 
+from .subscription import Subscription
 from .event_tag import event_tag_table
 from settings import Base
 import sqlalchemy as sa
@@ -21,5 +25,8 @@ class Event(Base):
     place = sa.Column(Geography(geometry_type='POINT', srid=4326), nullable=False)
     created_at = sa.Column(sa.DateTime(timezone=True), server_default=sa.func.now())
     updated_at = sa.Column(sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now())
-    schedules = relationship("EventSchedule", back_populates="event")
-    tags = relationship("Tag", secondary=event_tag_table, back_populates="events", lazy='selectin')
+    schedules = relationship("EventSchedule", back_populates="event", lazy='selectin')
+    tags = relationship("Tag", secondary=event_tag_table, back_populates="events", lazy='joined')
+    place_number = sa.Column(sa.Integer, sa.CheckConstraint('duration > 0 AND duration < 25', name="duration_con"),
+                             nullable=False)
+

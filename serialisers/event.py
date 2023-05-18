@@ -5,6 +5,7 @@ from typing import Any
 from geoalchemy2 import functions
 from pydantic import BaseModel, UUID4, Field, validator, constr
 
+from serialisers.tag import TagOut
 from serialisers.user import UserOut
 from settings.db import get_session
 
@@ -25,13 +26,6 @@ class EventCreate(BaseModel):
         return f"POINT({self.latitude} {self.longitude})"
 
 
-class TagOut(BaseModel):
-    name: str = Field(regex=r"[\w_-]+")
-
-    class Config:
-        orm_mode = True
-
-
 class EventOut(BaseModel):
     id: UUID4
     title: str = Field(max_length=100)
@@ -41,6 +35,8 @@ class EventOut(BaseModel):
     author: UserOut
     place: Any
     tags: list[TagOut]
+    created_at: datetime | None
+    updated_at: datetime | None
 
     @validator("place")
     def place_to_dict(cls, v):
@@ -55,21 +51,16 @@ class EventOut(BaseModel):
         orm_mode = True
 
 
-class EventScheduleOut(BaseModel):
+class ScheduleOut(BaseModel):
     id: UUID4
-    event: EventOut
     scheduled_at: datetime
-
+    is_canceled: bool
+    places_sub: int
+    created_at: datetime | None
+    updated_at: datetime | None
     class Config:
         orm_mode = True
 
 
-class EventScheduleCreate(BaseModel):
-    scheduled_at: datetime
-
-
-class EventScheduleFilter(EventScheduleOut):
-    distance: float
-
-    class Config:
-        orm_mode = True
+class EventScheduleOut(EventOut):
+    schedules: list[ScheduleOut]
