@@ -29,13 +29,14 @@ async def create_event(data: EventCreate, session: Annotated[Any, Depends(get_as
     event = Event(**event_dict)
     new_tags = (await session.execute(
         select(values(column('name', String), name="my_tag").data((tag,) for tag in data.tags)).join(
-            Tag, text("my_tag.name = tag.name")).where(Tag.name.is_(None)))).scalars().unique().all()
+            Tag, text("my_tag.name = tag.name"), isouter=True).where(Tag.name.is_(None)))).scalars().all()
     tags = [Tag(name=tag) for tag in new_tags]
-    if tags:
-        session.add_all(tags)
-    event.tags = (await session.scalars(select(Tag).where(Tag.name.in_(data.tags)))).all()
+    old_tags = list(set(data.tags) - set(new_tags))
+    old_tags = (await session.scalars(select(Tag).where(Tag.name.in_(old_tags)))).unique().all()
+    event.tags = tags + old_tags
     session.add(event)
     await session.commit()
+    await session.refresh(event)
     return event
 
 

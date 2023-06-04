@@ -13,7 +13,7 @@ class Comment(Base):
     user_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey('user.id', ondelete="CASCADE"), nullable=False)
     user = relationship("User", back_populates="comments", lazy='joined')
     schedule_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey('event_schedule.id', ondelete="CASCADE"), nullable=False)
-    schedule = relationship("EventSchedule", back_populates="comments", lazy='selectin')
+    schedule = relationship("EventSchedule", back_populates="comments", lazy='joined')
     text = sa.Column(sa.String())
     rating = sa.Column(sa.Integer(), sa.CheckConstraint('rating >=0 AND rating < 6', name="rating_con"))
     created_at = sa.Column(sa.DateTime(timezone=True), server_default=sa.func.now())

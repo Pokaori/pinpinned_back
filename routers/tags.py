@@ -19,5 +19,4 @@ router = APIRouter(
 @router.get("/", dependencies=[Depends(get_current_user)], response_model=list[TagOut])
 async def get_tags(session: Annotated[Any, Depends(get_async_session)]):
     q = await session.execute(select(Tag).order_by(desc(Tag.event_count), Tag.name))
-    await session.commit()
-    return q.scalars().all()
+    return q.scalars().unique().all()

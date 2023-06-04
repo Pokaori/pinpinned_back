@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
+import pytz
 from fastapi import Depends, HTTPException, APIRouter
 from sqlalchemy.future import select
 from starlette import status
@@ -10,7 +11,7 @@ from models import EventSchedule
 from models.subscription import Subscription
 from settings.auth import get_current_user
 from models.user import User
-from serialisers.subscription import SubscriptionOut, SubscriptionCreate
+from serialisers.subscription import SubscriptionOut, SubscriptionCreate, SubscriptionGet
 from settings.db import get_async_session
 
 router = APIRouter(
@@ -27,7 +28,7 @@ async def create_subscription(data: SubscriptionCreate,
     schedule = await session.get(EventSchedule, data.schedule_id)
     if schedule is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Event does not exist")
-    if schedule.scheduled_at > datetime.now():
+    if schedule.scheduled_at < datetime.now(tz=pytz.utc):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
                             detail="Event is over, you can't delete subscription")
     if schedule.event.author == user:
@@ -42,6 +43,17 @@ async def create_subscription(data: SubscriptionCreate,
     subscription = Subscription(**data.dict(), schedule=schedule, user=user)
     session.add(subscription)
     await session.commit()
+    await session.refresh(subscription)
+    return subscription
+
+
+@router.get('/schedule', summary='Get user schedule subscription', response_model=SubscriptionOut)
+async def get_subscription(schedule_id: UUID, session: Annotated[Any, Depends(get_async_session)],
+                           user: Annotated[User, Depends(get_current_user)]):
+    subscription = (await session.scalars(select(Subscription).where(Subscription.user_id == user.id).where(
+                                                                     Subscription.schedule_id == schedule_id))).first()
+    if subscription is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription does not exist")
     return subscription
 
 
@@ -60,9 +72,10 @@ async def delete_subscription(subscription_id: UUID, session: Annotated[Any, Dep
             detail="You are not owner of this subscription."
         )
     schedule = await session.get(EventSchedule, subscription.schedule_id)
-    if schedule.scheduled_at > datetime.now():
+    if schedule.scheduled_at < datetime.now(tz=pytz.utc):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Event is over, you can't unsubscription")
     await session.delete(subscription)
+    await session.commit()
 
 
 @router.get('/', summary='Get all user subscription', response_model=list[SubscriptionOut])

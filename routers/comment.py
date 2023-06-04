@@ -28,12 +28,10 @@ async def create_comment(data: CommentCreate, session: Annotated[Any, Depends(ge
     schedule = (await session.execute(select(EventSchedule).where(EventSchedule.id == data.schedule_id))).scalars().first()
     comment = (await session.scalars(
         select(Comment).where(Comment.schedule_id == data.schedule_id).where(Comment.user_id == user.id))).first()
-    if schedule.event.author_id != user.id and comment is not None:
+    if schedule.event.author_id == user.id and comment is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You already have comment.")
     if schedule is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Event doesn't exist.")
-    if data.rating is not None and schedule.scheduled_at > datetime.now(tz=pytz.utc):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Event isn't over, you can't enter rating.")
     subscription = (await session.scalars(select(Subscription).where(Subscription.user_id == user.id,
                                                                      Subscription.schedule_id == data.schedule_id))).first()
     if data.rating is not None and subscription is None:
@@ -43,6 +41,7 @@ async def create_comment(data: CommentCreate, session: Annotated[Any, Depends(ge
     comment = Comment(**data.dict(), schedule=schedule, user=user)
     session.add(comment)
     await session.commit()
+    await session.refresh(comment)
     return comment
 
 
@@ -61,6 +60,7 @@ async def delete_comment(comment_id: UUID, session: Annotated[Any, Depends(get_a
             detail="You are not owner of this comment."
         )
     await session.delete(comment)
+    await session.commit()
 
 
 @router.put('/{comment_id}', summary='Update event comment',  response_model=CommentOut)
@@ -77,8 +77,6 @@ async def update_comment(comment_id: UUID, data: CommentUpdate, session: Annotat
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You are not owner of this comment."
         )
-    if data.rating is not None and comment.schedule.scheduled_at > datetime.now(tz=pytz.utc):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Event isn't over, you can't enter rating.")
     subscription = (await session.scalars(select(Subscription).where(Subscription.user_id == user.id,
                                                                      Subscription.schedule_id == comment.schedule_id))).first()
     if data.rating is not None and subscription is None:
@@ -88,4 +86,5 @@ async def update_comment(comment_id: UUID, data: CommentUpdate, session: Annotat
     if data.rating:
         comment.rating = data.rating
     await session.commit()
+    await session.refresh(comment)
     return comment

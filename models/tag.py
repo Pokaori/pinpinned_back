@@ -10,7 +10,7 @@ import sqlalchemy as sa
 class Tag(Base):
     __tablename__ = "tag"
     name = sa.Column(sa.String, sa.CheckConstraint(r"regexp_like([\w_-]+)", name="tag_name"), primary_key=True)
-    events = relationship("Event", secondary=event_tag_table, back_populates="tags", lazy='selectin')
+    events = relationship("Event", secondary=event_tag_table, back_populates="tags", lazy='joined')
     created_at = sa.Column(sa.DateTime(timezone=True), server_default=sa.func.now())
     updated_at = sa.Column(sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now())
     event_count = column_property(

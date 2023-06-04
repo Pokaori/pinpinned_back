@@ -16,9 +16,10 @@ class EventCreate(BaseModel):
     title: str = Field(max_length=100)
     description: str
     duration: int = Field(lt=25, gt=0)
-    fee: float | None = Field(gt=0)
+    fee: float | None = Field(gte=0)
     longitude: float
     latitude: float
+    place_number: int = Field(gt=0)
     tags: list[TagValidate]
 
     @property
@@ -32,6 +33,7 @@ class EventOut(BaseModel):
     description: str
     duration: int = Field(lt=25, gt=0)
     fee: float | None = Field(ge=0)
+    place_number: int
     author: UserOut
     place: Any
     tags: list[TagOut]

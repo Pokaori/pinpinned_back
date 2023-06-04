@@ -9,8 +9,9 @@ from dotenv import load_dotenv
 load_dotenv()
 app = FastAPI()
 
+FRONT_URL = os.getenv("FRONT_URL")
 origins = [
-    os.getenv("FRONT_URL"),
+    FRONT_URL,
 ]
 
 app.add_middleware(
