@@ -2,7 +2,6 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-import pytz
 from fastapi import APIRouter, Depends, HTTPException, Query
 from geoalchemy2 import functions, Geography
 from sqlalchemy import type_coerce
